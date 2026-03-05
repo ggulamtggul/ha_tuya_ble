@@ -27,8 +27,17 @@ from Crypto.Cipher import AES
 
 from homeassistant.components.tuya.const import (
     DPCode,
-    DPType,
 )
+from enum import StrEnum
+
+class DPType(StrEnum):
+    """Tuya Data Point Type."""
+    BOOLEAN = "Boolean"
+    VALUE = "Integer"
+    ENUM = "Enum"
+    FAULT = "Bitmap"
+    STRING = "String"
+    RAW = "Raw"
 
 from .const import (
     CHARACTERISTIC_NOTIFY,
