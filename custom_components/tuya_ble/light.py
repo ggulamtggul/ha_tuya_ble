@@ -13,10 +13,19 @@ from homeassistant.util import color as color_util
 
 from homeassistant.components.tuya.const import (
     DPCode,
-    DPType,
     WorkMode,
 )
+from enum import StrEnum
 
+class DPType(StrEnum):
+    """Tuya Data Point Type."""
+    BOOLEAN = "Boolean"
+    INTEGER = "Integer"
+    ENUM = "Enum"
+    STRING = "String"
+    JSON = "Json"
+    RAW = "Raw"
+    FAULT = "Fault"
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
