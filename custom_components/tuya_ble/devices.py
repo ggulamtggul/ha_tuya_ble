@@ -22,9 +22,18 @@ from homeassistant.helpers.update_coordinator import (
 
 from homeassistant.components.tuya.const import (
     DPCode,
-    DPType,
 )
+from enum import StrEnum
 
+class DPType(StrEnum):
+    """Tuya Data Point Type."""
+    BOOLEAN = "Boolean"
+    INTEGER = "Integer"
+    ENUM = "Enum"
+    STRING = "String"
+    JSON = "Json"
+    RAW = "Raw"
+    FAULT = "Fault"
 from home_assistant_bluetooth import BluetoothServiceInfoBleak
 from .tuya_ble import (
     AbstaractTuyaBLEDeviceManager,
