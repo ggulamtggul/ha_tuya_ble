@@ -648,7 +648,11 @@ class TuyaBLEDevice:
             self._fire_disconnected_callbacks()
             self._fire_connection_status_callbacks()
             return
+        dropped_client = self._client
         self._client = None
+        self._clean_input()
+        if dropped_client is not None:
+            asyncio.create_task(self._release_client(dropped_client))
         self._fire_connection_status_callbacks()
         
         if was_paired:
@@ -692,6 +696,33 @@ class TuyaBLEDevice:
             self.address,
         )
         await self._execute_disconnect()
+
+    async def _release_client(
+        self, client: BleakClientWithServiceCache | None = None
+    ) -> None:
+        """Release a failed or dropped client, disconnecting it properly.
+
+        bleak routes notifications through a per-device watcher registered
+        on the shared BlueZ manager at connect time, and only removes it
+        when the client is disconnected. Dropping the reference without
+        disconnecting leaks the watcher, so every reconnect delivers each
+        notification one more time and the strict packet reassembly
+        desyncs permanently (see ha-tuya-ble #170). Local patch ported
+        from ha-tuya-ble PR #277.
+        """
+        if client is None:
+            client = self._client
+            self._client = None
+        self._clean_input()
+        if client is not None:
+            try:
+                await client.disconnect()
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.debug(
+                    "%s: Releasing the dropped connection failed",
+                    self.address,
+                    exc_info=True,
+                )
 
     async def _execute_disconnect(self) -> None:
         """Execute disconnection."""
@@ -774,7 +805,7 @@ class TuyaBLEDevice:
                             CHARACTERISTIC_NOTIFY, self._notification_handler
                         )
                     except:  # [BLEAK_EXCEPTIONS, BleakNotFoundError]:
-                        self._client = None
+                        await self._release_client()
                         _LOGGER.error("%s: starting notifications failed",
                                       self.address, exc_info=True)
                         continue
@@ -791,14 +822,14 @@ class TuyaBLEDevice:
                             0,
                             True,
                         ):
-                            self._client = None
+                            await self._release_client()
                             _LOGGER.error(
                                 "%s: Sending device info request failed",
                                 self.address,
                             )
                             continue
                     except:  # [BLEAK_EXCEPTIONS, BleakNotFoundError]:
-                        self._client = None
+                        await self._release_client()
                         _LOGGER.error("%s: Sending device info request failed",
                                       self.address, exc_info=True)
                         continue
@@ -814,14 +845,14 @@ class TuyaBLEDevice:
                             0,
                             True,
                         ):
-                            self._client = None
+                            await self._release_client()
                             _LOGGER.error(
                                 "%s: Sending pairing request failed",
                                 self.address,
                             )
                             continue
                     except:  # [BLEAK_EXCEPTIONS, BleakNotFoundError]:
-                        self._client = None
+                        await self._release_client()
                         _LOGGER.error("%s: Sending pairing request failed",
                                       self.address, exc_info=True)
                         continue
